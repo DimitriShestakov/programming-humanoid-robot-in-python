@@ -22,6 +22,7 @@
 
 from pid import PIDAgent
 from keyframes import hello
+import numpy as np
 
 
 class AngleInterpolationAgent(PIDAgent):
@@ -30,7 +31,8 @@ class AngleInterpolationAgent(PIDAgent):
                  teamname='DAInamite',
                  player_id=0,
                  sync_mode=True):
-        super(AngleInterpolationAgent, self).__init__(simspark_ip, simspark_port, teamname, player_id, sync_mode)
+        super(AngleInterpolationAgent, self).__init__(
+            simspark_ip, simspark_port, teamname, player_id, sync_mode)
         self.keyframes = ([], [], [])
 
     def think(self, perception):
@@ -41,8 +43,29 @@ class AngleInterpolationAgent(PIDAgent):
     def angle_interpolation(self, keyframes, perception):
         target_joints = {}
         # YOUR CODE HERE
+        names = keyframes[0]
+        times = keyframes[1]
+        keys = keyframes[2]
+
+        for name in range(len(names)):
+            for time in range(len(times[name])):
+                if time < len(times[name]) - 1 and times[name][time] < (perception.time - self.time) < times[name][time + 1]:
+                    t = ((perception.time - self.time) -
+                         times[name][time]) / (times[name][time + 1] - times[name][time])
+
+                    term_p0 = (
+                        ((1 - t) ** 3) * (np.array([times[name][time], keys[name][time][0]])))
+                    term_p1 = (3 * t * ((1 - t) ** 2) * ((np.array([times[name][time], keys[name][time][0]])) + np.array(
+                        [keys[name][time][1][1], keys[name][time][1][2]])))
+                    term_p2 = ((1 - t) * 3 * (t ** 2) * ((np.array([times[name][time], keys[name][time][0]])) + np.array(
+                        [keys[name][time][2][1], keys[name][time][2][2]])))
+                    term_p3 = (
+                        (t ** 3) * (np.array([times[name][time + 1], keys[name][time + 1][0]])))
+                    bezInterpolate = term_p0 + term_p1 + term_p2 + term_p3
+                    target_joints[names[name]] = bezInterpolate[1]
 
         return target_joints
+
 
 if __name__ == '__main__':
     agent = AngleInterpolationAgent()
